@@ -13,7 +13,7 @@
 ---
 
 ### 🌟 Sobre el Hack-i-athon 2026
-El **[Hack-i-athon 2026](https://hackiathon.dev/): Inteligencia Artificial Generativa** es la tercera edición de la competencia de IA más grande del Ecuador. Organizado por **Viamatica**, **IT Ahora** y **Citytech**, con **Aseguradora del Sur** como Líder de Innovación.
+El **[HackIAthon 2026](https://hackiathon.dev/): Inteligencia Artificial Generativa** es la tercera edición de la competencia de IA más grande del Ecuador. Organizado por **Viamatica**, **IT Ahora** y **Citytech**, con **Aseguradora del Sur** como Líder de Innovación.
 
 Este proyecto, **Angelus Sentinel**, nace como una respuesta directa a la visión del evento, utilizando IA Generativa con arquitectura de agentes (Function Calling) para humanizar y agilizar la atención médica de emergencia.
 
@@ -21,8 +21,7 @@ Este proyecto, **Angelus Sentinel**, nace como una respuesta directa a la visió
 
 ### 🏆 El Desafío: Tema 4 - Sistema de Alerta Temprana de Ingresos a Emergencias
 **Requerimiento Original (Tema 4):**
-> "4. Sistema de Alerta Temprana de Ingresos a Emergencias 
-> Descripción: Un webhook que se activa cuando un asegurado ingresa a la emergencia del hospital. Un agente revisa instantáneamente la validez de la póliza, el historial de pre-existencias y envía una notificación al departamento de admisiones del hospital y al gestor de casos del seguro simultáneamente."
+> "Descripción: Un webhook que se activa cuando un asegurado ingresa a la emergencia del hospital. Un agente revisa instantáneamente la validez de la póliza, el historial de pre-existencias y envía una notificación al departamento de admisiones del hospital y al gestor de casos del seguro simultáneamente."
 
 **Cómo lo Resolvimos (Nuestra Solución):**
 Para cumplir y superar esta premisa, hemos construido a **Angelus**, un **Agente Autónomo** con "Manos y Dedos" (Function Calling) que actúa como un centinela digital capaz de operar sobre ecosistemas de datos federados. El sistema implementa el flujo solicitado con arquitectura de "Cero Fricción":
@@ -31,6 +30,7 @@ Para cumplir y superar esta premisa, hemos construido a **Angelus**, un **Agente
 3.  **Activación por Webhook:** El sistema puede dispararse automáticamente cuando un hospital registra un ingreso a través de sistemas pre-existentes, sin interacción humana inicial.
 4.  **Triage Clínico-Administrativo:** Usando **Gemini Flash Lite 3.1**, el agente analiza los síntomas y cruza la información con la póliza del paciente en milisegundos.
 5.  **Notificación Simultánea:** Envía alertas instantáneas y estructuradas tanto al canal clínico del hospital como al canal administrativo del seguro.
+6.  **Validación de Multicobertura B2B:** Angelus es capaz de detectar y analizar simultáneamente pólizas de la seguridad social (IESS, ISSFA, ISSPOL) y seguros privados, optimizando la aprobación automática según la mejor cobertura disponible.
 
 ---
 

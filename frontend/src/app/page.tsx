@@ -84,61 +84,60 @@ export default function Home() {
       </nav>
 
       {/* Main Grid Content */}
-      <main className="max-w-[1700px] w-full mx-auto p-4 flex-1 flex flex-col gap-4 overflow-hidden">
+      <main className="max-w-[1700px] w-full mx-auto p-6 flex-1 flex flex-col gap-8 overflow-y-auto">
         
         {/* Fila 1: Chat vs Inputs */}
-        <div className="grid grid-cols-2 gap-6 h-[50vh]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-h-0">
           {/* Cuadrante Superior Izquierdo: Chat */}
-          <div className="flex flex-col h-full min-h-0">
+          <div className="flex flex-col h-[650px] min-h-0">
             <SentinelChat />
           </div>
 
           {/* Cuadrante Superior Derecho: Contenedor con Tabs */}
-          <div className="flex flex-col h-full min-h-0 relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+          <div className="flex flex-col h-[650px] min-h-0 relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
             
             {/* Tabs Header */}
-            <div className="flex w-full border-b border-slate-100 bg-slate-50/50 p-2 gap-2">
+            <div className="flex w-full border-b border-slate-100 bg-slate-50/50 p-3 gap-3 sticky top-0 z-10">
               <button 
                 onClick={() => setActiveTab("form")}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'form' ? 'bg-white text-rose-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
+                className={`flex-1 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'form' ? 'bg-white text-rose-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
               >
                 Formulario Manual
               </button>
               <button 
                 onClick={() => setActiveTab("webhook")}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'webhook' ? 'bg-white text-amber-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
+                className={`flex-1 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'webhook' ? 'bg-white text-amber-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
               >
                 Simular Webhook (B2B)
               </button>
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-y-auto relative p-4">
               {activeTab === "form" ? (
-                <div className="absolute inset-0 overflow-y-auto w-full h-full p-2">
-                  <EmergencyForm />
-                </div>
+                <EmergencyForm />
               ) : (
-                <div className="absolute inset-0 overflow-y-auto w-full h-full p-2">
-                  <WebhookSimulator />
-                </div>
+                <WebhookSimulator />
               )}
             </div>
           </div>
         </div>
 
         {/* Fila 2: Notificaciones Hospital vs Seguro */}
-        <div className="grid grid-cols-2 gap-6 h-[32vh]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-h-0">
           {/* Cuadrante Inferior Izquierdo: Hospital Notifications */}
-          <div className="flex flex-col h-full min-h-0">
+          <div className="flex flex-col h-[450px] min-h-0">
             <HospitalNotifications logs={logs} />
           </div>
 
           {/* Cuadrante Inferior Derecho: Insurance Notifications */}
-          <div className="flex flex-col h-full min-h-0">
+          <div className="flex flex-col h-[450px] min-h-0">
             <InsuranceNotifications logs={logs} />
           </div>
         </div>
+        
+        {/* Footer spacer */}
+        <div className="h-8 w-full"></div>
       </main>
     </div>
   );

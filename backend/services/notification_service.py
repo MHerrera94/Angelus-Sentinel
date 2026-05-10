@@ -41,8 +41,18 @@ class NotificationService:
         }
         
         # Notificación 2: Aseguradora (Foco en Cobertura y Póliza)
-        poliza_ref = insurance_data.get('policy_type') or insurance_data.get('employer') or insurance_data.get('plan') or 'GENÉRICA'
+        policies = federated_data.get('insurance_policies', []) if federated_data else []
         
+        # Formatear lista de pólizas para el log
+        if policies:
+            poliza_info = {
+                "id": f"{len(policies)} Pólizas Detectadas",
+                "detalles": [f"{p['type']}: {p['plan']} ({p['status']})" for p in policies],
+                "vigencia": "MULTICOBERTURA" if len(policies) > 1 else policies[0]['status']
+            }
+        else:
+            poliza_info = {"id": "SIN SEGURO", "vigencia": "INEXISTENTE"}
+
         insu_notif = {
             "timestamp": timestamp,
             "target": "Gestoría de Cobertura (Seguro)",
@@ -51,11 +61,9 @@ class NotificationService:
             "status": "AUTORIZADO" if decision == "APROBADO" else "EN REVISIÓN",
             "payload": {
                 "decision": decision,
-                "insurance_status": {
-                    "id": f"POL-{poliza_ref}",
-                    "vigencia": insurance_data.get('status', 'DESCONOCIDO')
-                },
+                "insurance_status": poliza_info,
                 "asegurado": patient,
+                "symptoms": alert_data.get('emergency_type', 'Análisis en curso'),
                 "preexistencias_relevantes": medical_history.get('pre_existing_conditions', []),
                 "monto_estimado": "Sujeto a auditoría",
                 "gestor_asignado": "Angelus Sentinel AI"

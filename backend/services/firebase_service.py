@@ -53,7 +53,8 @@ def federated_search(name_query: str = None, ci_query: str = None):
     collections = [
         "db_sentinel_hospital", 
         "db_hospital_publico", "db_hospital_privado", "db_clinica", 
-        "db_seguro_iess", "db_seguro_privado", "db_salud_publica"
+        "db_seguro_iess", "db_seguro_privado", "db_salud_publica",
+        "db_seguro_issfa", "db_seguro_isspol"
     ]
     
     results_by_ci = {}
@@ -83,7 +84,8 @@ def federated_search(name_query: str = None, ci_query: str = None):
                         "id": p_id,
                         "name": data.get("name"),
                         "sources": [],
-                        "is_in_sentinel": False
+                        "is_in_sentinel": False,
+                        "insurance_policies": []
                     }
                 
                 # Marcar si existe en nuestra base local
@@ -96,12 +98,19 @@ def federated_search(name_query: str = None, ci_query: str = None):
                 
                 # Consolidar datos para análisis
                 if col_name in ["db_hospital_publico", "db_hospital_privado", "db_clinica", "db_sentinel_hospital"]:
-                    # Priorizar Sentinel para historial clínico si existe
                     if col_name == "db_sentinel_hospital" or "clinical_history" not in results_by_ci[p_id]:
                         results_by_ci[p_id]["clinical_history"] = data
                 
-                if col_name in ["db_seguro_iess", "db_seguro_privado"]:
-                    results_by_ci[p_id]["insurance_policy"] = data
+                # Coleccionar múltiples seguros
+                if col_name in ["db_seguro_iess", "db_seguro_privado", "db_seguro_issfa", "db_seguro_isspol"]:
+                    policy_info = {
+                        "type": col_name.replace("db_seguro_", "").upper(),
+                        "plan": data.get("plan", "Básico"),
+                        "status": data.get("status", "ACTIVA"),
+                        "rank": data.get("rank", "N/A"),
+                        "employer": data.get("employer", "N/A")
+                    }
+                    results_by_ci[p_id]["insurance_policies"].append(policy_info)
                     
     return list(results_by_ci.values())
 

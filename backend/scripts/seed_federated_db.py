@@ -59,55 +59,59 @@ def seed_database():
     # 4. db_seguro_iess
     iess = db.collection("db_seguro_iess")
     data_4 = [
-        {"id": "0999999999", "name": "María García", "status": "Activo", "employer": "Tech Corp"},
-        {"id": "1234567890", "name": "Ana López", "status": "Jubilado", "employer": "Estado"},
-        {"id": "0922222222", "name": "Elena Narváez", "status": "Activo", "employer": "Banco Central"},
-        {"id": "1733333333", "name": "Roberto Gómez", "status": "Activo", "employer": "PetroEcuador"},
-        {"id": "0144444444", "name": "Sofía Castro", "status": "Cesante", "employer": "N/A"},
-        {"id": "0855555555", "name": "Mateo Villalba", "status": "Dependiente", "employer": "Padres"},
-        {"id": "1066666666", "name": "Lucía Méndez", "status": "Activo", "employer": "Municipio"}
+        {"id": "0999999999", "name": "María García", "status": "Activo", "employer": "Tech Corp", "plan": "Seguro General Obligatorio"},
+        {"id": "1234567890", "name": "Ana López", "status": "Jubilado", "employer": "Estado", "plan": "Seguro de Pensiones"},
+        {"id": "0922222222", "name": "Elena Narváez", "status": "Activo", "employer": "Banco Central", "plan": "Seguro General Obligatorio"},
+        {"id": "1733333333", "name": "Roberto Gómez", "status": "Activo", "employer": "PetroEcuador", "plan": "Seguro General Obligatorio"},
+        {"id": "1066666666", "name": "Lucía Méndez", "status": "Activo", "employer": "Municipio", "plan": "Seguro General Obligatorio"}
     ]
     for d in data_4: iess.document(d["id"]).set(d)
+
+    # 4b. db_seguro_issfa (Fuerzas Armadas)
+    issfa = db.collection("db_seguro_issfa")
+    data_issfa = [
+        {"id": "0933333333", "name": "Santiago Guerrero", "status": "Activo", "rank": "General", "plan": "Servicio Activo"},
+        {"id": "1111111111", "name": "Carlos Ruiz", "status": "Activo", "rank": "Coronel (R)", "plan": "Servicio Pasivo"}
+    ]
+    for d in data_issfa: issfa.document(d["id"]).set(d)
+
+    # 4c. db_seguro_isspol (Policía)
+    isspol = db.collection("db_seguro_isspol")
+    data_isspol = [
+        {"id": "0944444444", "name": "Ricardo Mendoza", "status": "Activo", "rank": "Sargento", "plan": "Servicio Activo"}
+    ]
+    for d in data_isspol: isspol.document(d["id"]).set(d)
 
     # 5. db_seguro_privado
     priv_ins = db.collection("db_seguro_privado")
     data_5 = [
-        {"id": "1712345678", "name": "Juan Pérez", "policy_type": "Estudiantil", "status": "Activo"},
-        {"id": "1111111111", "name": "Carlos Ruiz", "policy_type": "Premium Elite", "status": "Activo"},
-        {"id": "0922222222", "name": "Elena Narváez", "policy_type": "Global Care", "status": "Activo", "limit": 100000},
-        {"id": "1733333333", "name": "Roberto Gómez", "policy_type": "Platinum", "status": "Inactivo", "reason": "Falta de pago"},
-        {"id": "0144444444", "name": "Sofía Castro", "policy_type": "Básico", "status": "Activo"},
-        {"id": "0855555555", "name": "Mateo Villalba", "policy_type": "Junior", "status": "Activo"},
-        {"id": "1066666666", "name": "Lucía Méndez", "policy_type": "Familiar", "status": "Activo"}
+        {"id": "1111111111", "name": "Carlos Ruiz", "plan": "BMI Elite Internacional", "status": "Activo"},
+        {"id": "0922222222", "name": "Elena Narváez", "plan": "Saludsa Ideal 500 (Familiar)", "status": "Activo", "limit": 100000},
+        {"id": "0933333333", "name": "Santiago Guerrero", "plan": "Humana Global (Corporativo)", "status": "Activo"},
+        {"id": "1733333333", "name": "Roberto Gómez", "plan": "Aseguradora del Sur - Plan Vive", "status": "Inactivo", "reason": "Falta de pago"},
+        {"id": "0144444444", "name": "Sofía Castro", "plan": "Aseguradora del Sur - Plan Protege", "status": "Activo"},
+        {"id": "0855555555", "name": "Mateo Villalba", "plan": "Aseguradora del Sur - Plan Salva", "status": "Activo"},
+        {"id": "1066666666", "name": "Lucía Méndez", "plan": "Saludsa Pool (Individual)", "status": "Activo"}
     ]
     for d in data_5: priv_ins.document(d["id"]).set(d)
 
     # 6. db_salud_publica
     msp = db.collection("db_salud_publica")
     data_6 = [
-        {"id": "0912345678", "name": "Juan Pérez", "vaccines": ["COVID-19", "Influenza"]},
-        {"id": "0922222222", "name": "Elena Narváez", "vaccines": ["Hepatitis B", "Fiebre Amarilla"]},
-        {"id": "1733333333", "name": "Roberto Gómez", "vaccines": ["Refuerzo COVID"]},
-        {"id": "0144444444", "name": "Sofía Castro", "vaccines": ["Completo"]},
-        {"id": "0855555555", "name": "Mateo Villalba", "vaccines": ["Salk", "Sabin"]},
-        {"id": "1066666666", "name": "Lucía Méndez", "vaccines": ["Influenza"]}
+        {"id": "0933333333", "name": "Santiago Guerrero", "vaccines": ["Fiebre Amarilla", "Tétanos"]},
+        {"id": "0944444444", "name": "Ricardo Mendoza", "vaccines": ["COVID-19"]}
     ]
     for d in data_6: msp.document(d["id"]).set(d)
 
     # 7. db_sentinel_hospital (Local)
     sentinel = db.collection("db_sentinel_hospital")
     data_7 = [
-        {"id": "0912345678", "name": "Juan Pérez", "last_visit": "2024-01-15", "pre_existing_conditions": ["Asma"]},
-        {"id": "1234567890", "name": "Ana López", "last_visit": "2023-11-20", "pre_existing_conditions": ["Diabetes"]},
-        {"id": "0922222222", "name": "Elena Narváez", "last_visit": "2024-03-10", "pre_existing_conditions": ["Alergia Alimentaria"]},
-        {"id": "1733333333", "name": "Roberto Gómez", "last_visit": "2024-02-25", "pre_existing_conditions": ["Glaucoma"]},
-        {"id": "0144444444", "name": "Sofía Castro", "last_visit": "2023-12-05", "pre_existing_conditions": []},
-        {"id": "0855555555", "name": "Mateo Villalba", "last_visit": "2024-04-01", "pre_existing_conditions": ["Rinitis"]},
-        {"id": "1066666666", "name": "Lucía Méndez", "last_visit": "2024-01-30", "pre_existing_conditions": ["Migraña Crónica"]}
+        {"id": "0933333333", "name": "Santiago Guerrero", "last_visit": "2024-05-01", "pre_existing_conditions": ["Hipertensión"]},
+        {"id": "0944444444", "name": "Ricardo Mendoza", "last_visit": "2024-02-15", "pre_existing_conditions": []}
     ]
     for d in data_7: sentinel.document(d["id"]).set(d)
 
-    print("Carga masiva completada. 2 pacientes universales y 3 nuevos en cada silo.")
+    print("Carga masiva completada. Casos de Multicobertura (ISSFA/ISSPOL + Privado) añadidos.")
 
 if __name__ == "__main__":
     seed_database()

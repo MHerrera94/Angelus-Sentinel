@@ -50,7 +50,7 @@ export default function HospitalNotifications({ logs }: Props) {
                 {log.message}
               </p>
               {log.payload && (
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Prioridad Triage</p>
@@ -63,6 +63,26 @@ export default function HospitalNotifications({ logs }: Props) {
                       <p className="text-sm font-black text-emerald-600 uppercase">Validada</p>
                     </div>
                   </div>
+                  
+                  <div className="border-t border-slate-200 pt-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Motivo de Ingreso / Síntomas</p>
+                    <p className="text-xs font-bold text-slate-700 italic">
+                      "{log.payload.motivo_ingreso || 'No especificado'}"
+                    </p>
+                  </div>
+
+                  {log.payload.historial_interno && log.payload.historial_interno.length > 0 && (
+                    <div className="border-t border-slate-200 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Alertas de Historial (Sentinel)</p>
+                      <div className="flex flex-wrap gap-1">
+                        {log.payload.historial_interno.map((h: string, i: number) => (
+                          <span key={i} className="text-[9px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-md border border-rose-200">
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

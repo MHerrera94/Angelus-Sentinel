@@ -78,19 +78,18 @@ class GeminiService:
         
         DATOS DE IDENTIDAD Y COBERTURA:
         - Paciente: {patient_data.get('name')} (Historial en Hospital: {'SI' if patient_data.get('id') else 'NO'})
-        - Póliza: {policy_data.get('plan')} (Estado: {policy_data.get('status')})
-        - Coberturas Activas: {", ".join(policy_data.get('coverage', []))}
-        - Preexistencias Registradas: {", ".join(policy_data.get('pre_existing_conditions', []))}
+        - Pólizas Encontradas: {json.dumps(policy_data.get('policies', []))}
         
         INSTRUCCIÓN PARA EL CENTINELA:
-        1. Valida si la póliza está activa para el ingreso actual.
-        2. Menciona si el paciente tiene preexistencias que el Gestor del Seguro deba conocer.
-        3. Determina si el ingreso se aprueba automáticamente o requiere revisión manual por el Gestor.
-        4. Genera una respuesta JSON con:
+        1. Valida si al menos una de las pólizas está activa.
+        2. Si el paciente tiene seguro SOCIAL (IESS, ISSFA, ISSPOL) Y seguro PRIVADO, notifica al operador sobre la multicobertura.
+        3. Prioriza el seguro privado para la aprobación automática si el monto es alto, o el social según la urgencia administrativa.
+        4. Determina si el ingreso se aprueba automáticamente o requiere revisión manual.
+        5. Genera una respuesta JSON con:
            - decision: "APROBADO" | "REVISIÓN MANUAL" | "RECHAZADO"
            - triage_priority: "ADMIN_ALTA" | "ADMIN_MEDIA" | "ADMIN_BAJA"
            - triage_color: "#ef4444" | "#f59e0b" | "#10b981"
-           - reasoning: "Análisis de póliza y preexistencias"
+           - reasoning: "Análisis de multicobertura y preexistencias"
            - angelus_reply: "Tu informe técnico para el Gestor {operator_name} sobre la validez del ingreso."
         """
         
@@ -104,9 +103,9 @@ class GeminiService:
             self.is_active = False
             return f"Error en la validación administrativa: {str(e)}"
 
-    async def orchestrate_emergency(self, user_message: str, operator_name: str, form_data: dict = None):
+    async def orchestrate_emergency(self, user_message: str, operator_name: str, form_data: dict = None, history: list = None):
         """
-        Orquesta la respuesta utilizando Function Calling (Manos y Dedos de la IA).
+        Orquesta la respuesta utilizando Function Calling.
         """
         from backend.services.silo_services import SILO_TOOLS
         
@@ -117,16 +116,30 @@ class GeminiService:
             system_instruction=ANGELUS_PROMPT
         )
         
-        chat = model_with_tools.start_chat()
+        # Iniciar chat con historial si existe
+        chat_history = []
+        if history:
+            for msg in history:
+                role = "user" if msg["role"] == "user" else "model"
+                chat_history.append({"role": role, "parts": [msg["content"]]})
+        
+        chat = model_with_tools.start_chat(history=chat_history)
         
         self.is_active = True
         self.current_action = "Procesando la solicitud..."
         
-        context = f"El operador {operator_name} dice: {user_message}\n"
+        context = f"OPERADOR: {user_message}\n"
         if form_data:
-            context += f"Datos del formulario provistos: {json.dumps(form_data)}\n"
+            context += f"DATOS DISPONIBLES: {json.dumps(form_data)}\n"
             
-        context += "Tu tarea es usar tus herramientas (search_patients, register_patient, validate_insurance) según corresponda. Al final, SIEMPRE DEBES LLAMAR A send_admission_alert(ci, decision, triage_color, triage_priority) antes de emitir tu respuesta final."
+        context += """
+        INSTRUCCIÓN DE EJECUCIÓN INMEDIATA:
+        1. Si el paciente es nuevo, regístralo con 'register_patient'.
+        2. Valida el seguro con 'validate_insurance'.
+        3. SIEMPRE termina emitiendo la alerta con 'send_admission_alert'.
+        
+        IMPORTANTE: No hables en futuro. Ejecuta las herramientas y confirma los resultados.
+        """
         
         # Enviar mensaje inicial
         response = await chat.send_message_async(context)
@@ -154,12 +167,16 @@ class GeminiService:
                     }
                     self.current_action = action_map.get(func_name, f"Ejecutando {func_name}...")
                     
-                    # Ejecutar la función correspondiente
+                    # Ejecutar la función correspondiente de forma asíncrona
                     tool_result = {"error": "Herramienta no encontrada"}
                     for tool in SILO_TOOLS:
                         if tool.__name__ == func_name:
                             try:
-                                tool_result = tool(**func_args)
+                                import inspect
+                                if inspect.iscoroutinefunction(tool):
+                                    tool_result = await tool(**func_args)
+                                else:
+                                    tool_result = tool(**func_args)
                             except Exception as e:
                                 tool_result = {"error": str(e)}
                             break
@@ -187,22 +204,23 @@ class GeminiService:
             
         # Pedimos a un modelo sin herramientas que estructure la respuesta final
         struct_prompt = f"""
-        Convierte este reporte o pregunta de la IA en el siguiente formato JSON estricto:
+        Como estructurador de datos del Núcleo Angelus, tu misión es convertir el informe del AGENTE en JSON sin perder su inteligencia.
+        
+        INFORME DEL AGENTE:
         {final_text}
         
         Reglas de Tipo (type):
-        - Usa "RESULT" si es un informe final o confirmación.
-        - Usa "QUESTION" si necesitas que el usuario confirme algo (ej. "¿Desea registrar al paciente?").
+        - Usa "RESULT" para informes, análisis finales o explicaciones de procesos.
+        - Usa "QUESTION" solo si el agente requiere activamente un dato nuevo del operador.
         
         Formato requerido:
         {{
             "type": "RESULT" o "QUESTION",
-            "reply": "El resumen ejecutivo o la pregunta directa para el operador.",
-            "color": "#ef4444" (Rojo), "#f59e0b" (Amarillo), "#10b981" (Verde),
-            "options": [{{"id": "cédula", "label": "SÍ, REGISTRAR EN SENTINEL"}}] (SOLO si type es QUESTION y ofreces una acción),
+            "reply": "Aquí debes incluir la respuesta completa del agente, preservando su razonamiento, explicaciones técnicas y tono sofisticado.",
+            "color": "#ef4444" (Emergencia/Error), "#f59e0b" (Proceso/Duda), "#10b981" (Éxito/Notificación),
             "analysis": {{
-                "decision": "ESTADO",
-                "angelus_reply": "El texto detallado del reporte técnico"
+                "decision": "ESTADO_TÉCNICO",
+                "angelus_reply": "Copia exacta del informe original del agente"
             }}
         }}
         """

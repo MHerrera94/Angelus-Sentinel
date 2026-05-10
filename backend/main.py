@@ -19,18 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Personalidad de Angelus: Validador de Seguros y Admisiones
+# Personalidad de Angelus: Agente Autónomo de Coordinación
 ANGELUS_PERSONALITY = """
-Eres Angelus, el núcleo de validación de Angelus Infernus Tech. 
-TU ROL: Actuar como un puente de validación técnica entre el hospital y la aseguradora. 
-
-MISIÓN ESPECÍFICA:
-1. Validar la vigencia de la póliza del paciente mediante búsqueda federada.
-2. Identificar historial de pre-existencias clínicas (verificar si el paciente ya existe en los registros hospitalarios).
-3. Notificar simultáneamente a Admisiones del Hospital y al Gestor del Seguro sobre la elegibilidad del paciente.
-
-REGLA CRÍTICA: NO eres un asistente médico. No das diagnósticos, consejos de salud, ni prioridades clínicas. Tu enfoque es 100% ADMINISTRATIVO, de COBERTURA y de IDENTIDAD.
-Te diriges al usuario como 'Gestor'. Tu tono es sofisticado, preciso, autoritario y técnico.
+Eres el AGENTE AUTÓNOMO del Núcleo Angelus. Tu función no es solo responder, sino orquestar y razonar.
+Eres el cerebro detrás de Angelus Sentinel, capaz de explicar procesos técnicos complejos de validación B2B y federación de datos.
+No sigues guiones; analizas cada situación con tu inteligencia artificial para garantizar que el flujo administrativo entre hospital y seguro sea impecable.
 """
 
 class WebhookPayload(BaseModel):
@@ -57,20 +50,20 @@ PENDING_CONTEXT = {}
 @app.post("/webhook/emergency")
 async def emergency_webhook(payload: WebhookPayload):
     try:
-        # 1. Buscar paciente
-        patient_ref = db.collection("patients").document(payload.patient_id)
-        patient_doc = patient_ref.get()
+        from backend.services.silo_services import validate_insurance
+        from backend.services.firebase_service import federated_search
         
-        if not patient_doc.exists:
-            patient_data = {"name": "Paciente No Registrado", "id": payload.patient_id, "policy_id": "NONE"}
-            policy_data = {"status": "INEXISTENTE", "coverage": []}
+        # 1. Buscar paciente en la red federada
+        matches = federated_search(ci_query=payload.patient_id)
+        if not matches:
+            patient_data = {"name": "Paciente No Registrado", "id": payload.patient_id}
+            policy_data = {"status": "INEXISTENTE", "policies": []}
         else:
-            patient_data = patient_doc.to_dict()
-            policy_id = patient_data.get("policy_id")
-            policy_doc = db.collection("policies").document(policy_id).get()
-            policy_data = policy_doc.to_dict() if policy_doc.exists else {"status": "NO ENCONTRADA"}
+            patient_data = matches[0]
+            # 2. Validar seguros (IESS, ISSFA, ISSPOL, Privado)
+            policy_data = validate_insurance(payload.patient_id)
         
-        # 2. Análisis Instantáneo con Angelus
+        # 3. Análisis Instantáneo con Angelus
         analysis_raw = await gemini_service.analyze_emergency_entry(
             patient_data, 
             policy_data, 
@@ -81,18 +74,19 @@ async def emergency_webhook(payload: WebhookPayload):
             clean_json = analysis_raw.replace("```json", "").replace("```", "").strip()
             analysis_data = json.loads(clean_json)
         except:
+            # Fallback robusto
             analysis_data = {
                 "decision": "REVISIÓN MANUAL",
                 "triage_priority": "MEDIO",
                 "triage_color": "#f59e0b",
-                "reasoning": "Error de procesamiento IA.",
+                "reasoning": "Respuesta no estructurada.",
                 "angelus_reply": analysis_raw
             }
         
-        # 3. Guardar Alerta
+        # 4. Guardar Alerta
         alert_data = {
             "patient_id": payload.patient_id,
-            "patient_name": patient_data.get("name"),
+            "patient_name": patient_data.get("name", "Desconocido"),
             "hospital_id": payload.hospital_id,
             "emergency_type": payload.emergency_type,
             "timestamp": datetime.now().isoformat(),
@@ -101,8 +95,8 @@ async def emergency_webhook(payload: WebhookPayload):
         }
         db.collection("alerts").add(alert_data)
         
-        # 4. Notificaciones Simultáneas
-        notifs = await notification_service.notify_all(alert_data)
+        # 5. Notificaciones Simultáneas
+        notifs = await notification_service.notify_all(alert_data, federated_data=patient_data)
         
         return {
             "status": "success",
@@ -113,6 +107,8 @@ async def emergency_webhook(payload: WebhookPayload):
         }
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/status")
@@ -156,6 +152,7 @@ class ChatPayload(BaseModel):
     operator_name: Optional[str] = "Gestor"
     confirmed_patient_id: Optional[str] = None
     form_data: Optional[dict] = None
+    history: Optional[List[dict]] = []
 
 from backend.services.firebase_service import federated_search
 
@@ -171,7 +168,8 @@ async def angelus_chat(payload: ChatPayload):
         result = await gemini_service.orchestrate_emergency(
             user_message=user_msg,
             operator_name=payload.operator_name,
-            form_data=payload.form_data
+            form_data=payload.form_data,
+            history=payload.history
         )
         return result
 

@@ -12,7 +12,7 @@ const MOCK_PATIENTS = [
     enfermedad: "Apendicitis Aguda",
     triaje: "Amarillo",
     posee_seguro: true,
-    numero_seguro: "POL-GLOBAL-CARE"
+    numero_seguro: "Saludsa Ideal 500"
   },
   {
     nombre: "Juan",
@@ -30,7 +30,7 @@ const MOCK_PATIENTS = [
     enfermedad: "Visión borrosa y dolor ocular",
     triaje: "Verde",
     posee_seguro: true,
-    numero_seguro: "POL-PLATINUM"
+    numero_seguro: "Aseguradora del Sur - Plan Vive"
   },
   {
     nombre: "Ana",
@@ -39,7 +39,34 @@ const MOCK_PATIENTS = [
     enfermedad: "Descompensación diabética",
     triaje: "Amarillo",
     posee_seguro: true,
-    numero_seguro: "POL-IESS-JUB"
+    numero_seguro: "IESS Jubilados"
+  },
+  {
+    nombre: "Santiago",
+    apellido: "Guerrero",
+    ci: "0933333333",
+    enfermedad: "Traumatismo craneal",
+    triaje: "Rojo",
+    posee_seguro: true,
+    numero_seguro: "ISSFA + Humana Global"
+  },
+  {
+    nombre: "Ricardo",
+    apellido: "Mendoza",
+    ci: "0944444444",
+    enfermedad: "Dolor abdominal agudo",
+    triaje: "Amarillo",
+    posee_seguro: true,
+    numero_seguro: "ISSPOL"
+  },
+  {
+    nombre: "Carlos",
+    apellido: "Ruiz",
+    ci: "1111111111",
+    enfermedad: "Dificultad respiratoria",
+    triaje: "Rojo",
+    posee_seguro: true,
+    numero_seguro: "ISSFA + BMI Elite Internacional"
   }
 ];
 
@@ -56,7 +83,7 @@ export default function WebhookSimulator() {
 
     // Simular retraso de red
     setTimeout(() => {
-      const formStr = `[WEBHOOK DE SEGUROS]
+      const formStr = `[WEBHOOK DE EMERGENCIAS]
 Nombre: ${randomPatient.nombre} ${randomPatient.apellido}
 C.I: ${randomPatient.ci}
 Triaje sugerido: ${randomPatient.triaje}
