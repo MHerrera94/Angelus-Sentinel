@@ -36,8 +36,8 @@ Seguro: ${formData.posee_seguro ? "Sí (Póliza: " + formData.numero_seguro + ")
       });
       window.dispatchEvent(event);
       
-      // Limpiar un poco el formulario
-      setFormData(prev => ({...prev, enfermedad: "", ci: "", numero_seguro: ""}));
+      // Notificar éxito visualmente o mantener datos
+      // setFormData(prev => ({...prev, enfermedad: "", ci: "", numero_seguro: ""}));
       
     } catch (error) {
       console.error("Error al procesar formulario:", error);
@@ -60,10 +60,25 @@ Seguro: ${formData.posee_seguro ? "Sí (Póliza: " + formData.numero_seguro + ")
         <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-rose-600 shadow-inner">
           <AlertTriangle size={20} />
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="text-xl font-black text-slate-800 tracking-tight">Registro de Admisión</h2>
           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Pacientes Críticos</p>
         </div>
+        <button 
+          type="button"
+          onClick={() => setFormData({
+            nombre: "",
+            apellido: "",
+            ci: "",
+            enfermedad: "",
+            triaje: "Verde",
+            posee_seguro: false,
+            numero_seguro: "",
+          })}
+          className="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors flex items-center gap-1 border border-slate-200 px-2 py-1 rounded-md"
+        >
+          Limpiar
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">

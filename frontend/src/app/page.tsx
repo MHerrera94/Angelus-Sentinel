@@ -6,10 +6,12 @@ import SentinelChat from "@/components/SentinelChat";
 import EmergencyForm from "@/components/EmergencyForm";
 import HospitalNotifications from "@/components/HospitalNotifications";
 import InsuranceNotifications from "@/components/InsuranceNotifications";
+import WebhookSimulator from "@/components/WebhookSimulator";
 
 export default function Home() {
   const [logs, setLogs] = useState<any[]>([]);
   const [simulating, setSimulating] = useState(false);
+  const [activeTab, setActiveTab] = useState<"form" | "webhook">("webhook");
 
   const fetchLogs = async () => {
     try {
@@ -72,17 +74,6 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-4">
-              <button 
-                onClick={simulateWebhook}
-                disabled={simulating}
-                className={`${
-                  simulating ? 'bg-emerald-500' : 'bg-amber-500 hover:bg-amber-600'
-                } text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-90 hidden`} // Hidden for now as the form handles it, but kept just in case
-              >
-                {simulating ? <CheckCircle className="animate-bounce" size={14} /> : <Zap size={14} />}
-                {simulating ? "PROCESANDO EVENTO..." : "SIMULAR WEBHOOK (TEMA 4)"}
-              </button>
-              
               <div className="badge-online">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                 Sistema Monitoreo Activo
@@ -95,16 +86,44 @@ export default function Home() {
       {/* Main Grid Content */}
       <main className="max-w-[1700px] w-full mx-auto p-4 flex-1 flex flex-col gap-4 overflow-hidden">
         
-        {/* Fila 1: Chat vs Formulario */}
+        {/* Fila 1: Chat vs Inputs */}
         <div className="grid grid-cols-2 gap-6 h-[50vh]">
           {/* Cuadrante Superior Izquierdo: Chat */}
           <div className="flex flex-col h-full min-h-0">
             <SentinelChat />
           </div>
 
-          {/* Cuadrante Superior Derecho: Formulario */}
-          <div className="flex flex-col h-full min-h-0">
-            <EmergencyForm />
+          {/* Cuadrante Superior Derecho: Contenedor con Tabs */}
+          <div className="flex flex-col h-full min-h-0 relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+            
+            {/* Tabs Header */}
+            <div className="flex w-full border-b border-slate-100 bg-slate-50/50 p-2 gap-2">
+              <button 
+                onClick={() => setActiveTab("form")}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'form' ? 'bg-white text-rose-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
+              >
+                Formulario Manual
+              </button>
+              <button 
+                onClick={() => setActiveTab("webhook")}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'webhook' ? 'bg-white text-amber-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
+              >
+                Simular Webhook (B2B)
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden relative">
+              {activeTab === "form" ? (
+                <div className="absolute inset-0 overflow-y-auto w-full h-full p-2">
+                  <EmergencyForm />
+                </div>
+              ) : (
+                <div className="absolute inset-0 overflow-y-auto w-full h-full p-2">
+                  <WebhookSimulator />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

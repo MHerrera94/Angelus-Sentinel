@@ -54,7 +54,9 @@ export default function HospitalNotifications({ logs }: Props) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Prioridad Triage</p>
-                      <p className="text-sm font-black text-rose-600">{log.payload.triage_priority}</p>
+                      <p className="text-sm font-black" style={{ color: log.payload.triage_color || '#e11d48' }}>
+                        {log.payload.triage_priority}
+                      </p>
                     </div>
                     <div>
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Identidad</p>

@@ -5,9 +5,9 @@
 /frontend/build/
 
 # Python
-backend/__pycache__/
-backend/*.pyc
-backend/.venv/
+__pycache__/
+*.pyc
+.venv/
 .venv/
 venv/
 

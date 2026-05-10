@@ -51,6 +51,7 @@ def federated_search(name_query: str = None, ci_query: str = None):
     Agrupa resultados por CI.
     """
     collections = [
+        "db_sentinel_hospital", 
         "db_hospital_publico", "db_hospital_privado", "db_clinica", 
         "db_seguro_iess", "db_seguro_privado", "db_salud_publica"
     ]
@@ -81,16 +82,47 @@ def federated_search(name_query: str = None, ci_query: str = None):
                     results_by_ci[p_id] = {
                         "id": p_id,
                         "name": data.get("name"),
-                        "sources": []
+                        "sources": [],
+                        "is_in_sentinel": False
                     }
+                
+                # Marcar si existe en nuestra base local
+                if col_name == "db_sentinel_hospital":
+                    results_by_ci[p_id]["is_in_sentinel"] = True
+
                 # Añadir datos de esta fuente
                 source_data = {"source": col_name, "data": data}
                 results_by_ci[p_id]["sources"].append(source_data)
                 
                 # Consolidar datos para análisis
-                if col_name in ["db_hospital_publico", "db_hospital_privado", "db_clinica"]:
-                    results_by_ci[p_id]["clinical_history"] = data
+                if col_name in ["db_hospital_publico", "db_hospital_privado", "db_clinica", "db_sentinel_hospital"]:
+                    # Priorizar Sentinel para historial clínico si existe
+                    if col_name == "db_sentinel_hospital" or "clinical_history" not in results_by_ci[p_id]:
+                        results_by_ci[p_id]["clinical_history"] = data
+                
                 if col_name in ["db_seguro_iess", "db_seguro_privado"]:
                     results_by_ci[p_id]["insurance_policy"] = data
                     
     return list(results_by_ci.values())
+
+def register_in_sentinel(patient_data: dict):
+    """
+    Registra un paciente en la base de datos local del Hospital Sentinel.
+    Requiere al menos 'id' (cédula) y 'name'.
+    """
+    if not db:
+        return {"success": False, "message": "No database connection"}
+        
+    p_id = patient_data.get("id")
+    if not p_id:
+        return {"success": False, "message": "Cédula (id) es requerida"}
+        
+    doc_ref = db.collection("db_sentinel_hospital").document(p_id)
+    doc_ref.set({
+        "id": p_id,
+        "name": patient_data.get("name", "Desconocido"),
+        "last_visit": patient_data.get("last_visit", ""),
+        "pre_existing_conditions": patient_data.get("pre_existing_conditions", [])
+    })
+    
+    return {"success": True, "message": f"Paciente {patient_data.get('name')} registrado en Sentinel"}

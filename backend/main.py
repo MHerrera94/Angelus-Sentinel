@@ -19,13 +19,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Personalidad de Angelus (Extraída de angelus_core.py)
+# Personalidad de Angelus: Validador de Seguros y Admisiones
 ANGELUS_PERSONALITY = """
-Eres Angelus, el núcleo de procesamiento de Angelus Infernus Tech.
-CONTEXTO: Estás integrado en un sistema de admisión hospitalaria en tiempo real.
-TU MISIÓN: Triage digital y validación de cobertura. El paciente YA está en el hospital.
-REGLA DE ORO: No des consejos médicos básicos como 'visite a un doctor'. Tu análisis debe centrarse en la prioridad clínica y la elegibilidad administrativa para agilizar el ingreso.
-Te diriges al usuario como 'Usuario' o 'Gestor'. Tu tono es sofisticado, preciso y autoritario.
+Eres Angelus, el núcleo de validación de Angelus Infernus Tech. 
+TU ROL: Actuar como un puente de validación técnica entre el hospital y la aseguradora. 
+
+MISIÓN ESPECÍFICA:
+1. Validar la vigencia de la póliza del paciente mediante búsqueda federada.
+2. Identificar historial de pre-existencias clínicas (verificar si el paciente ya existe en los registros hospitalarios).
+3. Notificar simultáneamente a Admisiones del Hospital y al Gestor del Seguro sobre la elegibilidad del paciente.
+
+REGLA CRÍTICA: NO eres un asistente médico. No das diagnósticos, consejos de salud, ni prioridades clínicas. Tu enfoque es 100% ADMINISTRATIVO, de COBERTURA y de IDENTIDAD.
+Te diriges al usuario como 'Gestor'. Tu tono es sofisticado, preciso, autoritario y técnico.
 """
 
 class WebhookPayload(BaseModel):
@@ -45,6 +50,9 @@ async def root():
 
 from backend.services.gemini_service import gemini_service
 from backend.services.notification_service import notification_service
+
+# Memoria temporal de sesión para confirmaciones administrativas
+PENDING_CONTEXT = {}
 
 @app.post("/webhook/emergency")
 async def emergency_webhook(payload: WebhookPayload):
@@ -107,6 +115,13 @@ async def emergency_webhook(payload: WebhookPayload):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/status")
+async def get_status():
+    return {
+        "is_active": gemini_service.is_active,
+        "action": gemini_service.current_action
+    }
+
 @app.get("/notifications")
 async def get_notifications():
     return notification_service.logs
@@ -147,110 +162,23 @@ from backend.services.firebase_service import federated_search
 @app.post("/chat")
 async def angelus_chat(payload: ChatPayload):
     try:
-        # Caso 1: Resolución de Identidad Confirmada (Humano ya eligió)
+        user_msg = payload.message
+        
+        # Inyectar contexto si hay confirmación de UI
         if payload.confirmed_patient_id:
-            matches = federated_search(ci_query=payload.confirmed_patient_id)
-            if not matches:
-                return {"type": "ERROR", "reply": "Paciente no encontrado en las bases federadas."}
-            patient_data = matches[0]
+            user_msg = f"CONFIRMACIÓN DEL GESTOR: Por favor, registra inmediatamente al paciente nuevo con cédula {payload.confirmed_patient_id} usando los datos del formulario."
             
-            # Simular datos para Angelus
-            p_basic = {"name": patient_data["name"], "id": patient_data["id"]}
-            p_policy = patient_data.get("insurance_policy", {"status": "NO ENCONTRADA"})
-            
-            analysis_raw = await gemini_service.analyze_emergency_entry(p_basic, p_policy, payload.operator_name)
-            clean_json = analysis_raw.replace("```json", "").replace("```", "").strip()
-            analysis_data = json.loads(clean_json)
-            
-            alert_data = {
-                "patient_id": payload.confirmed_patient_id,
-                "patient_name": patient_data.get("name"),
-                "hospital_id": "HOSP-01",
-                "emergency_type": "Ingreso post-confirmación",
-                "timestamp": datetime.now().isoformat(),
-                "analysis": analysis_data
-            }
-            db.collection("alerts").add(alert_data)
-            await notification_service.notify_all(alert_data, federated_data=patient_data)
-            
-            return {
-                "type": "RESULT",
-                "reply": analysis_data.get("angelus_reply"),
-                "analysis": analysis_data,
-                "color": analysis_data.get("triage_color")
-            }
-
-        # Extraer datos de la petición (Formulario o NLP)
-        if payload.form_data:
-            name = f"{payload.form_data.get('nombre', '')} {payload.form_data.get('apellido', '')}".strip()
-            ci = payload.form_data.get("ci")
-            symptoms = payload.form_data.get("enfermedad", "No especificado")
-        else:
-            entities = await gemini_service.extract_entities(payload.message)
-            name = entities.get("patient_name")
-            ci = None
-            symptoms = entities.get("emergency_type", "No especificado")
-        
-        if not name:
-            return {
-                "type": "QUESTION",
-                "reply": "He recibido su mensaje, pero no logro identificar el nombre del paciente. ¿Podría proporcionarlo?"
-            }
-
-        # Caso 2: Búsqueda Federada
-        matches = federated_search(name_query=name, ci_query=ci)
-        
-        if len(matches) == 0:
-            pre = await gemini_service.pre_triage(symptoms)
-            return {
-                "type": "QUESTION",
-                "color": pre["color"],
-                "reply": f"Análisis preliminar de Angelus: Prioridad {pre['priority']}. {pre['reasoning']}. He buscado en el ecosistema federado y no encuentro registros para '{name}'. Para crear un ingreso nuevo o validar cobertura externa, por favor proporcione su Número de Cédula."
-            }
-        
-        # Caso 3: Desambiguación
-        if len(matches) > 1:
-            pre = await gemini_service.pre_triage(symptoms)
-            return {
-                "type": "DISAMBIGUATION",
-                "color": pre["color"],
-                "reply": f"Prioridad preliminar: {pre['priority']}. He detectado {len(matches)} pacientes que coinciden con '{name}' en diferentes bases de datos. Por favor, confirme el paciente correcto:",
-                "options": [{"id": m["id"], "label": f"{m['name']} (Cédula: {m['id']}) - Registros en {len(m['sources'])} sistemas"} for m in matches]
-            }
-
-        # Caso 4: Coincidencia Única (Agregación)
-        patient_data = matches[0]
-        
-        # Simular datos para Angelus
-        p_basic = {"name": patient_data["name"], "id": patient_data["id"]}
-        p_policy = patient_data.get("insurance_policy", {"status": "NO ENCONTRADA", "message": "Paciente solo existe en clínicas/hospitales públicos."})
-        
-        analysis_raw = await gemini_service.analyze_emergency_entry(p_basic, p_policy, payload.operator_name)
-        clean_json = analysis_raw.replace("```json", "").replace("```", "").strip()
-        analysis_data = json.loads(clean_json)
-        
-        alert_data = {
-            "patient_id": patient_data["id"],
-            "patient_name": patient_data["name"],
-            "hospital_id": "HOSP-01",
-            "emergency_type": symptoms,
-            "timestamp": datetime.now().isoformat(),
-            "analysis": analysis_data
-        }
-        db.collection("alerts").add(alert_data)
-        await notification_service.notify_all(alert_data, federated_data=patient_data)
-
-        return {
-            "type": "RESULT",
-            "reply": analysis_data.get("angelus_reply"),
-            "analysis": analysis_data,
-            "color": analysis_data.get("triage_color")
-        }
+        result = await gemini_service.orchestrate_emergency(
+            user_message=user_msg,
+            operator_name=payload.operator_name,
+            form_data=payload.form_data
+        )
+        return result
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return {"type": "ERROR", "reply": f"Error en mi núcleo de procesamiento federado: {str(e)}"}
+        return {"type": "ERROR", "reply": f"Error del sistema: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn

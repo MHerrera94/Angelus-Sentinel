@@ -71,10 +71,31 @@ export default function SentinelChat() {
     }
   };
 
+  const [currentAction, setCurrentAction] = useState<string>("");
+
+  useEffect(() => {
+    const statusInterval = setInterval(async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/status");
+        const data = await res.json();
+        if (data.is_active && data.action) {
+          setCurrentAction(data.action);
+        } else {
+          setCurrentAction("");
+        }
+      } catch (e) {
+        // silenciar errores
+      }
+    }, 600);
+    return () => clearInterval(statusInterval);
+  }, []);
+
   useEffect(() => {
     const handleFormSubmit = (e: Event) => {
       const customEvent = e as CustomEvent;
-      sendMessage(customEvent.detail.text, undefined, customEvent.detail.formData);
+      const { text, formData } = customEvent.detail;
+      // Usamos el texto pre-formateado del formulario o construimos uno
+      sendMessage(text, undefined, formData);
     };
     window.addEventListener('sentinel-form-submit', handleFormSubmit);
     return () => window.removeEventListener('sentinel-form-submit', handleFormSubmit);
@@ -149,7 +170,7 @@ export default function SentinelChat() {
                   )}
                 </div>
                 
-                {m.type === "DISAMBIGUATION" && m.options && (
+                {(m.type === "DISAMBIGUATION" || m.type === "QUESTION") && m.options && (
                   <div className="flex flex-col gap-2 mt-2 w-full">
                     {m.options.map((opt, oi) => (
                       <button
@@ -167,11 +188,13 @@ export default function SentinelChat() {
             </div>
           </div>
         ))}
-        {loading && (
+        {(loading || currentAction) && (
           <div className="flex justify-start">
              <div className="bg-indigo-100/50 p-3 rounded-2xl rounded-tl-none border border-indigo-200/30 flex items-center gap-2">
                 <Loader2 className="animate-spin text-indigo-600" size={16} />
-                <span className="text-xs text-indigo-600 font-black italic uppercase tracking-tighter">Sincronizando...</span>
+                <span className="text-xs text-indigo-600 font-black italic uppercase tracking-tighter">
+                  {currentAction || "Sincronizando..."}
+                </span>
               </div>
           </div>
         )}
