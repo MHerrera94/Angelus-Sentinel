@@ -1,33 +1,43 @@
 "use client";
 
-import { ShieldAlert, CheckCircle, Zap } from "lucide-react";
+import { ShieldAlert, CheckCircle, Zap, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import SentinelChat from "@/components/SentinelChat";
 import EmergencyForm from "@/components/EmergencyForm";
 import HospitalNotifications from "@/components/HospitalNotifications";
 import InsuranceNotifications from "@/components/InsuranceNotifications";
-import WebhookSimulator from "@/components/WebhookSimulator";
 
 export default function Home() {
   const [logs, setLogs] = useState<any[]>([]);
+  const [showTestUsers, setShowTestUsers] = useState(false);
   const [simulating, setSimulating] = useState(false);
-  const [activeTab, setActiveTab] = useState<"form" | "webhook">("webhook");
 
   const fetchLogs = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/notifications");
+      const response = await fetch("http://127.0.0.1:8000/notifications", {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setLogs(data);
+      setLogs(data || []);
     } catch (error) {
       console.error("Error fetching logs:", error);
+      // Set empty array on error to prevent undefined issues
+      setLogs([]);
     }
   };
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(() => {
-      fetchLogs();
-    }, 3000); // Polling faster to show notifications
+    const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -38,18 +48,23 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patient_id: "0912345678",
-          hospital_id: "HOSP-METROPOLITANO",
-          emergency_type: "Pérdida de conciencia repentina",
-          operator_name: "SISTEMA_WEBHOOK"
-        })
+          patient_id: "DEMO-" + Date.now(),
+          hospital_id: "HOSP-01",
+          emergency_type: "TRAUMA",
+          symptoms: "Paciente crítico en emergencia"
+        }),
+        signal: AbortSignal.timeout(5000) // 5 second timeout
       });
       
-      if (response.ok) {
-        setTimeout(async () => {
-          await fetchLogs();
-        }, 500);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
+      const data = await response.json();
+      console.log("Webhook response:", data);
+      setTimeout(async () => {
+        await fetchLogs();
+      }, 500);
     } catch (error) {
       console.error("Simulación fallida:", error);
     } finally {
@@ -58,87 +73,102 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Navigation Header */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                <ShieldAlert size={24} />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold font-heading leading-none text-slate-800 tracking-tighter">Emergencia Hospital Sentinel</span>
-                <span className="text-[10px] font-bold text-primary tracking-widest uppercase opacity-80">Console Layer 3</span>
-              </div>
+    <main className="h-screen max-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-50 via-blue-50 to-white flex flex-col overflow-hidden">
+      {/* Compact Header */}
+      <header className="bg-white/60 backdrop-blur-2xl border-b border-slate-200 h-12 flex-none px-6 py-2 z-50">
+        <div className="flex items-center justify-between h-full">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+              <ShieldAlert size={20} className="text-cyan-400" />
             </div>
-
-            <div className="flex items-center gap-4">
-              <div className="badge-online">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                Sistema Monitoreo Activo
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Angelus Sentinel</h1>
+              <p className="text-sm font-medium text-slate-700 tracking-tight">Emergency Dashboard</p>
             </div>
           </div>
-        </div>
-      </nav>
-
-      {/* Main Grid Content */}
-      <main className="max-w-[1700px] w-full mx-auto p-6 flex-1 flex flex-col gap-8 overflow-y-auto">
-        
-        {/* Fila 1: Chat vs Inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-h-0">
-          {/* Cuadrante Superior Izquierdo: Chat */}
-          <div className="flex flex-col h-[650px] min-h-0">
-            <SentinelChat />
-          </div>
-
-          {/* Cuadrante Superior Derecho: Contenedor con Tabs */}
-          <div className="flex flex-col h-[650px] min-h-0 relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
-            
-            {/* Tabs Header */}
-            <div className="flex w-full border-b border-slate-100 bg-slate-50/50 p-3 gap-3 sticky top-0 z-10">
+          
+          <div className="flex items-center gap-3">
+            <div className="relative">
               <button 
-                onClick={() => setActiveTab("form")}
-                className={`flex-1 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'form' ? 'bg-white text-rose-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
+                onClick={() => setShowTestUsers(!showTestUsers)}
+                disabled={simulating}
+                className={`${
+                  simulating 
+                    ? 'bg-cyan-500 shadow-lg shadow-cyan-500/50' 
+                    : 'bg-gradient-to-r from-cyan-500 to-emerald-500 hover:brightness-110'
+                } text-white px-3 py-1 rounded-lg text-xs font-black transition-all active:scale-95 disabled:opacity-90`}
               >
-                Formulario Manual
+                {simulating ? "Processing..." : "Usuarios de Prueba"}
               </button>
-              <button 
-                onClick={() => setActiveTab("webhook")}
-                className={`flex-1 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeTab === 'webhook' ? 'bg-white text-amber-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'}`}
-              >
-                Simular Webhook (B2B)
-              </button>
-            </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto relative p-4">
-              {activeTab === "form" ? (
-                <EmergencyForm />
-              ) : (
-                <WebhookSimulator />
+              
+              {/* Test Users Popover */}
+              {showTestUsers && (
+                <div className="absolute top-full mt-2 right-0 z-50 w-80 bg-slate-900/60 backdrop-blur-xl border border-cyan-500/50 rounded-lg shadow-lg shadow-cyan-500/20">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-cyan-300 text-sm font-black">Usuarios de Prueba</h3>
+                      <button 
+                        onClick={() => setShowTestUsers(false)}
+                        className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="p-2 bg-slate-800/40 rounded-lg border border-white/10">
+                        <p className="text-cyan-400 text-xs font-bold mb-1">Paciente 1:</p>
+                        <p className="text-cyan-300 text-xs">Cédula: <span className="text-emerald-400 font-mono">1726354910</span></p>
+                        <p className="text-cyan-300 text-xs">Nombre: <span className="text-emerald-400">Juan Pérez</span></p>
+                        <p className="text-cyan-300 text-xs">Seguro: <span className="text-emerald-400 font-mono">SEG-987654</span></p>
+                      </div>
+                      <div className="p-2 bg-slate-800/40 rounded-lg border border-white/10">
+                        <p className="text-cyan-400 text-xs font-bold mb-1">Paciente 2:</p>
+                        <p className="text-cyan-300 text-xs">Cédula: <span className="text-emerald-400 font-mono">0912345678</span></p>
+                        <p className="text-cyan-300 text-xs">Nombre: <span className="text-emerald-400">María García</span></p>
+                        <p className="text-cyan-300 text-xs">Seguro: <span className="text-emerald-400 font-mono">SEG-123456</span></p>
+                      </div>
+                      <div className="p-2 bg-slate-800/40 rounded-lg border border-white/10">
+                        <p className="text-cyan-400 text-xs font-bold mb-1">Paciente 3:</p>
+                        <p className="text-cyan-300 text-xs">Cédula: <span className="text-emerald-400 font-mono">1711223344</span></p>
+                        <p className="text-cyan-300 text-xs">Nombre: <span className="text-emerald-400">Carlos Rodríguez</span></p>
+                        <p className="text-cyan-300 text-xs">Seguro: <span className="text-emerald-400 font-mono">SEG-555666</span></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
+            
+            <div className="flex items-center gap-2 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/30">
+              <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></div>
+              <span className="text-emerald-400 text-[10px] font-black">System active</span>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Fila 2: Notificaciones Hospital vs Seguro */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-h-0">
-          {/* Cuadrante Inferior Izquierdo: Hospital Notifications */}
-          <div className="flex flex-col h-[450px] min-h-0">
-            <HospitalNotifications logs={logs} />
-          </div>
-
-          {/* Cuadrante Inferior Derecho: Insurance Notifications */}
-          <div className="flex flex-col h-[450px] min-h-0">
-            <InsuranceNotifications logs={logs} />
-          </div>
+      {/* Bento Grid Container */}
+      <div className="grid grid-cols-2 grid-rows-[1.5fr_1fr] gap-4 flex-1 p-4 min-h-0">
+        {/* Top Left: Patient Admission Entry */}
+        <div className="flex flex-col h-full min-h-0">
+          <EmergencyForm />
         </div>
-        
-        {/* Footer spacer */}
-        <div className="h-8 w-full"></div>
-      </main>
-    </div>
+
+        {/* Top Right: AI Chat Console */}
+        <div className="flex flex-col h-full min-h-0">
+          <SentinelChat />
+        </div>
+
+        {/* Bottom Left: Clinical Notifications */}
+        <div className="flex flex-col h-full min-h-0">
+          <HospitalNotifications logs={logs} />
+        </div>
+
+        {/* Bottom Right: Insurance Validation */}
+        <div className="flex flex-col h-full min-h-0">
+          <InsuranceNotifications logs={logs} />
+        </div>
+      </div>
+    </main>
   );
 }
